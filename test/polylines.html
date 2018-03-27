@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Simple Polylines</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 50%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var map;
+      var datacount=0;
+      var flightPlanCoordinates = [
+        {lat: 43.6175, lng: -79.67215}
+      ];     
+      var prevlat = 43.6175;
+      var prevlng = -79.67215;
+
+       // This example creates a 2-pixel-wide red polyline showing the path of
+      // the first trans-Pacific flight between Oakland, CA, and Brisbane,
+      // Australia which was made by Charles Kingsford Smith.
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 15,
+          center: {lat: 43.6175, lng: -79.67215},
+          mapTypeId: 'terrain'
+        });
+
+        drawMap();
+      }
+      function drawMap(){
+        var flightPath = new google.maps.Polyline({
+          path: flightPlanCoordinates,
+          geodesic: true,
+          strokeColor: '#FF0000',
+          strokeOpacity: 1.0,
+          strokeWeight: 2,
+          zoom: 100
+        });
+
+        flightPath.setMap(map);
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDlWHhDtpuigyYv0LmEc8g5g12vkoiGrnk&callback=initMap">
+    </script>
+
+    <div id="chat"></div>
+
+    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        jQuery(function($){
+          var socket = io.connect();
+          var $chat = $('#chat');
+
+          socket.on('connection',function(){
+              socket.emit('connection');
+          });
+          socket.on('new message', function(data){
+              $chat.prepend(data + "<br/>");
+              var nvarr = data.split("&");
+              var conver = 111000;
+              //console.log(nvarr[0].substr(0,3));
+              nvarr[0] = nvarr[0].replace("\\s+","");
+              nvarr[1] = nvarr[1].replace("\\s+","");
+
+              if(nvarr[0].substr(0,3) == "px="){
+                var vx = nvarr[0].substr(3)
+                //console.log("data vx:" + vx);
+              }
+              if(nvarr[1].substr(0,3) == "py="){
+                var vy = nvarr[1].substr(3)
+                //console.log("data vy:" + vy);
+              }
+
+              var newlat = (prevlat + ((parseFloat(vx)/111000000)*2));
+              var newlng = (prevlng - ((parseFloat(vy)/85000000)*2));
+
+              var point = new google.maps.LatLng('' + newlat, '' + newlng);
+
+              prevlat = newlat;
+              prevlng = newlng;
+ 
+              datacount = datacount + 1;
+
+              if (datacount > 20){
+                flightPlanCoordinates.push(point);
+                drawMap();
+                datacount = 0;
+                console.log('' + vx + ', ' + '' + vy);
+              }
+              
+
+              socket.emit('connection');
+          });
+
+        });
+    </script>
+  </body>
+</html>
